@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/zc2638/gosl/htmlTemp"
 	"gopkg.in/russross/blackfriday.v2"
-	"log"
 	"net/http"
 	"os"
 	"path"
@@ -16,21 +15,20 @@ import (
 
 func main() {
 
+	var port = "8080"
 	args := os.Args[1:]
-	if len(args) > 2 {
-		os.Stdout.WriteString("gosl error: '" + strings.Join(args, " ") + "' is not allowed\n")
-		os.Stdout.Close()
-		return
+
+	if len(args) == 0 {
+		args = []string{"help"}
 	}
 
-	var port = "8080"
-	if len(args) != 0 {
+	if len(args) > 0 && len(args) < 3 {
 		switch args[0] {
-		case "-v", "-version":
+		case "-v", "version":
 			os.Stdout.WriteString("v0.0.1\n")
 			os.Stdout.Close()
 			return
-		case "-h", "-help":
+		case "-h", "help":
 			help := `
 NAME:
     gosl - Go Standard Library Sample Tool
@@ -39,26 +37,34 @@ USAGE:
 VERSION:
     v0.0.1
 COMMANDS:
-    -port           http server port
+    web           http server(web 8080)
 GLOBAL OPTIONS:
-    -help, -h       show help
-    -version, -v    print the version
+    help, -h       show help
+    version, -v    print the version
 `
 			os.Stdout.WriteString(strings.TrimPrefix(help, "\n"))
 			os.Stdout.Close()
 			return
-		case "-port":
-			_, err := strconv.Atoi(args[1])
-			if err != nil {
-				os.Stdout.WriteString("gosl error: '" + strings.Join(args, " ") + "' is not allowed\n")
-				os.Stdout.Close()
-				return
+		case "web":
+			if len(args) == 2 {
+				_, err := strconv.Atoi(args[1])
+				if err != nil {
+					os.Stdout.WriteString("gosl error: '" + strings.Join(args, " ") + "' is not allowed\n")
+					os.Stdout.Close()
+					return
+				}
+				port = args[1]
 			}
-			port = args[1]
+
+			os.Stdout.WriteString("Starting Server in " + port + "\n")
+			os.Stdout.Close()
+			listen(port)
+			return
 		}
 	}
-
-	listen(port)
+	os.Stdout.WriteString("gosl error: '" + strings.Join(args, " ") + "' is not allowed\n")
+	os.Stdout.Close()
+	return
 }
 
 func listen(port string) {
@@ -135,7 +141,10 @@ func listen(port string) {
 		w.Write([]byte(htmlTemp.Footer))
 	})
 
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
+		os.Stdout.WriteString("gosl error: " + err.Error() + "\n")
+		os.Stdout.Close()
+	}
 }
 
 func parseMap(m interface{}, p string) ([]byte, error) {
